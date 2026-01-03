@@ -4,6 +4,7 @@ import os
 import json
 import contextlib
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.responses import JSONResponse
@@ -14,12 +15,27 @@ from .tools import empleados, registros, reportes, nomina
 # Instancia de base de datos
 db = Database()
 
+# Configurar seguridad del transporte para permitir el proxy de EasyPanel
+transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=[
+        "localhost:*",
+        "127.0.0.1:*",
+        "0.0.0.0:*",
+        # EasyPanel hosts
+        "*.easypanel.host:*",
+        "cocson-mcp-registro-e-s.6jy9qo.easypanel.host:*",
+        "cocson-mcp-registro-e-s.6jy9qo.easypanel.host",
+    ],
+)
+
 # Crear servidor MCP con Streamable HTTP
 mcp = FastMCP(
     "mcp-reportes-acceso",
     stateless_http=True,
     json_response=True,
     streamable_http_path="/mcp",
+    transport_security=transport_security,
 )
 
 
