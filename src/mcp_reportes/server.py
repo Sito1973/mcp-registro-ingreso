@@ -3,7 +3,6 @@
 import os
 import json
 import asyncio
-from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 
 from .database import Database
@@ -12,23 +11,19 @@ from .tools import empleados, registros, reportes, nomina
 # Instancia de base de datos
 db = Database()
 
-
-@asynccontextmanager
-async def lifespan(app):
-    """Maneja el ciclo de vida de la aplicación"""
-    await db.connect()
-    print("✅ Conexión a base de datos establecida")
-    yield
-    await db.disconnect()
-    print("🔌 Conexión a base de datos cerrada")
-
-
 # Crear servidor MCP con FastMCP
-mcp = FastMCP(
-    "mcp-reportes-acceso",
-    version="1.0.0",
-    lifespan=lifespan
-)
+mcp = FastMCP("mcp-reportes-acceso")
+
+# Variable para controlar si ya se conectó a la BD
+_db_connected = False
+
+
+async def ensure_db_connected():
+    """Asegura que la base de datos esté conectada"""
+    global _db_connected
+    if not _db_connected:
+        await db.connect()
+        _db_connected = True
 
 
 # ============== HERRAMIENTAS MCP ==============
@@ -47,6 +42,7 @@ async def consultar_empleados(
         restaurante: Filtrar por punto de trabajo (Bandidos|Sumo|Leños y Parrilla)
         departamento: Filtrar por departamento
     """
+    await ensure_db_connected()
     result = await empleados.consultar_empleados(db, activos_solo, restaurante, departamento)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -59,6 +55,7 @@ async def buscar_empleado(termino: str) -> str:
     Args:
         termino: Texto a buscar (código, nombre o apellido)
     """
+    await ensure_db_connected()
     result = await empleados.buscar_empleado(db, termino)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -79,6 +76,7 @@ async def consultar_registros_fecha(
         restaurante: Filtrar por restaurante (opcional)
         tipo: ENTRADA o SALIDA (opcional)
     """
+    await ensure_db_connected()
     result = await registros.consultar_registros_fecha(db, fecha, empleado_id, restaurante, tipo)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -99,6 +97,7 @@ async def consultar_registros_rango(
         empleado_id: UUID del empleado (opcional)
         restaurante: Filtrar por restaurante (opcional)
     """
+    await ensure_db_connected()
     result = await registros.consultar_registros_rango(db, fecha_inicio, fecha_fin, empleado_id, restaurante)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -112,6 +111,7 @@ async def calcular_horas_trabajadas_dia(empleado_id: str, fecha: str) -> str:
         empleado_id: UUID del empleado
         fecha: Fecha en formato YYYY-MM-DD
     """
+    await ensure_db_connected()
     result = await reportes.calcular_horas_trabajadas_dia(db, empleado_id, fecha)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -130,6 +130,7 @@ async def reporte_horas_semanal(
         fecha_semana: Cualquier fecha de la semana YYYY-MM-DD (opcional, actual si no se especifica)
         restaurante: Filtrar por restaurante (opcional)
     """
+    await ensure_db_connected()
     result = await reportes.reporte_horas_semanal(db, empleado_id, fecha_semana, restaurante)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -150,6 +151,7 @@ async def reporte_horas_mensual(
         empleado_id: UUID del empleado (opcional)
         restaurante: Filtrar por restaurante (opcional)
     """
+    await ensure_db_connected()
     result = await reportes.reporte_horas_mensual(db, anio, mes, empleado_id, restaurante)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -162,6 +164,7 @@ async def obtener_ultimo_registro(empleado_id: str) -> str:
     Args:
         empleado_id: UUID del empleado
     """
+    await ensure_db_connected()
     result = await registros.obtener_ultimo_registro(db, empleado_id)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -180,6 +183,7 @@ async def estadisticas_asistencia(
         fecha_fin: Fecha fin YYYY-MM-DD
         restaurante: Filtrar por restaurante (opcional)
     """
+    await ensure_db_connected()
     result = await reportes.estadisticas_asistencia(db, fecha_inicio, fecha_fin, restaurante)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -192,6 +196,7 @@ async def empleados_sin_salida(fecha: str = None) -> str:
     Args:
         fecha: Fecha YYYY-MM-DD (default: hoy)
     """
+    await ensure_db_connected()
     result = await registros.empleados_sin_salida(db, fecha)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -204,6 +209,7 @@ async def obtener_configuracion(clave: str = None) -> str:
     Args:
         clave: Nombre de la configuración (opcional, todas si no se especifica)
     """
+    await ensure_db_connected()
     result = await reportes.obtener_configuracion(db, clave)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
@@ -224,6 +230,7 @@ async def resumen_nomina_quincenal(
         quincena: 1 (días 1-15) o 2 (días 16-fin de mes)
         restaurante: Filtrar por restaurante (opcional)
     """
+    await ensure_db_connected()
     result = await nomina.resumen_nomina_quincenal(db, anio, mes, quincena, restaurante)
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
