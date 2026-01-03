@@ -9,7 +9,7 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.routing import Route, Mount
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
 import uvicorn
 
 from .database import Database
@@ -220,37 +220,22 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 sse_sessions = {}
 
 
-async def handle_sse(request):
-    """Maneja conexiones SSE"""
-    # Crear transporte SSE por sesión
+async def handle_sse(scope, receive, send):
+    """Maneja conexiones SSE (función ASGI raw)"""
     sse = SseServerTransport("/messages")
-    
-    async with sse.connect_sse(
-        request.scope,
-        request.receive,
-        request._send
-    ) as streams:
+
+    async with sse.connect_sse(scope, receive, send) as streams:
         await server.run(
             streams[0],
             streams[1],
             server.create_initialization_options()
         )
-    
-    # Retornar respuesta vacía para satisfacer Starlette después de cerrar SSE
-    return Response(status_code=200)
 
 
-async def handle_messages(request):
-    """Maneja mensajes POST del cliente"""
-    # Crear un nuevo transporte para manejar el mensaje
+async def handle_messages(scope, receive, send):
+    """Maneja mensajes POST del cliente (función ASGI raw)"""
     sse = SseServerTransport("/messages")
-    await sse.handle_post_message(
-        request.scope,
-        request.receive,
-        request._send
-    )
-    # Retornar respuesta vacía para satisfacer Starlette
-    return Response(status_code=202)
+    await sse.handle_post_message(scope, receive, send)
 
 
 async def health_check(request):
@@ -266,8 +251,8 @@ async def health_check(request):
 app = Starlette(
     routes=[
         Route("/health", health_check, methods=["GET"]),
-        Route("/sse", handle_sse, methods=["GET"]),
-        Route("/messages", handle_messages, methods=["POST"]),
+        Mount("/sse", app=handle_sse),
+        Mount("/messages", app=handle_messages),
     ],
     on_startup=[lambda: asyncio.create_task(db.connect())],
     on_shutdown=[lambda: asyncio.create_task(db.disconnect())]
