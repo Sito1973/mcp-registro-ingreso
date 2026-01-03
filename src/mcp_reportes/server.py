@@ -1,33 +1,23 @@
 """Servidor MCP para Reportes de Control de Acceso con Streamable HTTP"""
 
-import asyncio
 import os
 import json
-from contextlib import asynccontextmanager
+import contextlib
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
+from starlette.responses import JSONResponse
+import uvicorn
 from .database import Database
 from .tools import empleados, registros, reportes, nomina
 
 # Instancia de base de datos
 db = Database()
 
-
-@asynccontextmanager
-async def lifespan(app):
-    """Maneja el ciclo de vida de la aplicación"""
-    await db.connect()
-    print("Base de datos conectada")
-    try:
-        yield
-    finally:
-        await db.disconnect()
-        print("Base de datos desconectada")
-
-
 # Crear servidor MCP con Streamable HTTP
 mcp = FastMCP(
     "mcp-reportes-acceso",
-    lifespan=lifespan,
+    stateless_http=True,
     json_response=True,
 )
 
@@ -252,14 +242,63 @@ async def resumen_nomina_quincenal(
     return json.dumps(result, default=str, ensure_ascii=False, indent=2)
 
 
+async def health_check(request):
+    """Health check endpoint"""
+    return JSONResponse({
+        "status": "healthy",
+        "server": "mcp-reportes-acceso",
+        "version": "2.0.0",
+        "transport": "streamable-http"
+    })
+
+
+def create_starlette_app():
+    """Crea la aplicación Starlette con el servidor MCP montado"""
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette):
+        """Maneja el ciclo de vida de la aplicación"""
+        # Conectar base de datos
+        await db.connect()
+        print("Base de datos conectada")
+
+        # Iniciar el session manager de MCP
+        async with mcp.session_manager.run():
+            yield
+
+        # Desconectar base de datos
+        await db.disconnect()
+        print("Base de datos desconectada")
+
+    app = Starlette(
+        routes=[
+            Route("/health", health_check, methods=["GET"]),
+            Mount("/mcp", app=mcp.streamable_http_app()),
+        ],
+        lifespan=lifespan,
+    )
+
+    return app
+
+
 def main():
     """Punto de entrada principal"""
     port = int(os.getenv("PORT", "8000"))
 
     if os.getenv("PORT"):
+        # Modo Streamable HTTP para deployment
         print(f"Iniciando servidor MCP con Streamable HTTP (puerto {port})")
-        mcp.run(transport="streamable-http", port=port)
+
+        app = create_starlette_app()
+
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=port,
+            log_level="info"
+        )
     else:
+        # Modo stdio para Claude Desktop local
         print("Iniciando servidor MCP en modo stdio")
         mcp.run(transport="stdio")
 
