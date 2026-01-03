@@ -7,7 +7,7 @@ Servidor MCP (Model Context Protocol) para consultar reportes de nómina y asist
 - 12 herramientas MCP para consultas de empleados, registros y reportes
 - Conexión async a PostgreSQL via asyncpg
 - Cálculos automáticos de horas extras según normativa colombiana
-- Soporte SSE para despliegue en Easypanel
+- **Streamable HTTP** para despliegue en Easypanel (MCP SDK v1.8+)
 
 ## Herramientas Disponibles
 
@@ -22,8 +22,8 @@ Servidor MCP (Model Context Protocol) para consultar reportes de nómina y asist
 | `reporte_horas_mensual` | Consolidado mensual |
 | `obtener_ultimo_registro` | Último registro de empleado |
 | `estadisticas_asistencia` | Estadísticas generales |
-| `empleados_sin_salida` | Empleados sin salida |
-| `obtener_configuracion` | Configuraciones del sistema |
+| `empleados_sin_salida` | Pendientes de marcar salida |
+| `obtener_configuracion` | Configuraciones sistema |
 | `resumen_nomina_quincenal` | Resumen para nómina |
 
 ## Instalación Local
@@ -42,7 +42,20 @@ python -m mcp_reportes.server
    - `TIMEZONE`: `America/Bogota`
    - `PORT`: `8000`
 
-## Configuración Claude Desktop
+## Endpoint MCP (Streamable HTTP)
+
+```
+https://tu-app.easypanel.host/mcp
+```
+
+Este endpoint soporta:
+- `POST /mcp` - Enviar mensajes al servidor
+- `GET /mcp` - Iniciar streaming de respuestas
+- `DELETE /mcp` - Terminar sesión
+
+## Uso con Claude Desktop
+
+Para uso local con Claude Desktop (modo stdio):
 
 ```json
 {
@@ -59,7 +72,3 @@ python -m mcp_reportes.server
   }
 }
 ```
-
-## Uso con SSE (Easypanel)
-
-El servidor expone un endpoint SSE en `http://host:8000/sse` para comunicación con clientes MCP remotos.
