@@ -1,0 +1,25 @@
+[project]
+name = "mcp-reportes-acceso"
+version = "1.0.0"
+description = "Servidor MCP para reportes de control de acceso y nómina"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+    "python-dotenv>=1.0.0",
+    "pytz>=2024.1",
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+    "sse-starlette>=1.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+mcp-reportes = "mcp_reportes.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_reportes"]
