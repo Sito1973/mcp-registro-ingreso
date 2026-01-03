@@ -235,6 +235,9 @@ async def handle_sse(request):
             streams[1],
             server.create_initialization_options()
         )
+    
+    # Retornar respuesta vacía para satisfacer Starlette después de cerrar SSE
+    return Response(status_code=200)
 
 
 async def handle_messages(request):
