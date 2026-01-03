@@ -19,6 +19,7 @@ mcp = FastMCP(
     "mcp-reportes-acceso",
     stateless_http=True,
     json_response=True,
+    streamable_http_path="/mcp",
 )
 
 
@@ -270,10 +271,14 @@ def create_starlette_app():
         await db.disconnect()
         print("Base de datos desconectada")
 
+    # Obtener la app MCP con el path configurado
+    mcp_app = mcp.streamable_http_app()
+
     app = Starlette(
         routes=[
             Route("/health", health_check, methods=["GET"]),
-            Mount("/mcp", app=mcp.streamable_http_app()),
+            # Montar en root para evitar problemas de path
+            Mount("/", app=mcp_app),
         ],
         lifespan=lifespan,
     )

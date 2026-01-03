@@ -22,9 +22,9 @@ EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 
-# Health check
+# Health check (usa $PORT que EasyPanel configura)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=5)" || exit 1
+    CMD python -c "import os; import httpx; httpx.get(f'http://localhost:{os.getenv(\"PORT\", 8000)}/health', timeout=5)" || exit 1
 
 # Run the server
 CMD ["mcp-reportes"]
