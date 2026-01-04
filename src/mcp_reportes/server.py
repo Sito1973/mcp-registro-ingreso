@@ -9,8 +9,13 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.routing import Route
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 import uvicorn
+
+class NoOpResponse(Response):
+    """Respuesta que no hace nada, usada cuando la respuesta ya fue enviada manualmente via ASGI"""
+    async def __call__(self, scope, receive, send):
+        return
 
 from .database import Database
 from .tools import empleados, registros, reportes, nomina
@@ -244,7 +249,7 @@ async def handle_messages(request):
             request.receive,
             request._send
         )
-    return JSONResponse({"status": "accepted"}, status_code=202)
+    return NoOpResponse()
 
 
 async def health_check(request):
