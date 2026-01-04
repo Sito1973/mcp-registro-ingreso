@@ -177,21 +177,6 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["anio", "mes", "quincena"]
             }
-        ),
-        Tool(
-            name="maintenance_buscar_typos",
-            description="Busca discrepancias y typos en los campos conocidos de restaurante/departamento",
-            inputSchema={"type": "object", "properties": {}}
-        ),
-        Tool(
-            name="maintenance_descubrir_esquema",
-            description="Escanea TODAS las tablas de la base de datos en busca del typo 'Leños Y Parrila'",
-            inputSchema={"type": "object", "properties": {}}
-        ),
-        Tool(
-            name="mantenimiento_limpiar_puntos",
-            description="Limpia typos en todas las tablas (empleados y registros)",
-            inputSchema={"type": "object", "properties": {}}
         )
     ]
 
@@ -225,12 +210,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = await reportes.obtener_configuracion(db, **arguments)
         elif name == "resumen_nomina_quincenal":
             result = await nomina.resumen_nomina_quincenal(db, **arguments)
-        elif name == "maintenance_buscar_typos":
-            result = await registros.maintenance_buscar_typos(db)
-        elif name == "maintenance_descubrir_esquema":
-            result = await registros.maintenance_descubrir_esquema(db)
-        elif name == "mantenimiento_limpiar_puntos":
-            result = await registros.mantenimiento_limpiar_puntos(db)
         else:
             result = {"error": f"Herramienta '{name}' no encontrada"}
         
