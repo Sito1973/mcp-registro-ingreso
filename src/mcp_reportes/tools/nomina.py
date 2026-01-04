@@ -62,8 +62,8 @@ async def resumen_nomina_quincenal(
     """
     
     results = await db.execute(query, {
-        'inicio': str(inicio),
-        'fin': str(fin),
+        'inicio': inicio,
+        'fin': fin,
         'restaurante': restaurante
     })
     

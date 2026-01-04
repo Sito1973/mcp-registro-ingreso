@@ -36,22 +36,39 @@ async def get_data():
                 with open(output_file, "a", encoding="utf-8") as f:
                     if emp_id:
                         f.write(f"Empleado encontrado: {emp_nombre} (ID: {emp_id})\n")
+                        f.write(f"Consultando horas del 2025-12-29 al 2026-01-02\n\n")
                         
-                        # Consultar registros
-                        reg_result = await session.call_tool(
-                            "consultar_registros_fecha",
-                            {"fecha": "2026-01-02", "empleado_id": emp_id}
-                        )
-                        reg_data = json.loads(reg_result.content[0].text)
+                        dates = [
+                            "2025-12-29", "2025-12-30", "2025-12-31",
+                            "2026-01-01", "2026-01-02"
+                        ]
                         
-                        f.write(f"DEBUG Response: {json.dumps(reg_data, indent=2)}\n")
+                        total_horas = 0
                         
-                        if "error" in reg_data:
-                             f.write(f"SERVER ERROR: {reg_data['error']}\n")
-                        else:
-                             f.write(f"Total registros: {reg_data.get('total_registros', 'N/A')}\n")
-                             for reg in reg_data.get("registros", []):
-                                 f.write(f"- {reg['hora_registro']} | {reg['tipo_registro']} | {reg['punto_trabajo']}\n")
+                        for fecha in dates:
+                            f.write(f"--- Fecha: {fecha} ---\n")
+                            horas_result = await session.call_tool(
+                                "calcular_horas_trabajadas_dia",
+                                {"empleado_id": emp_id, "fecha": fecha}
+                            )
+                            horas_data = json.loads(horas_result.content[0].text)
+                            
+                            if "error" in horas_data:
+                                f.write(f"Error: {horas_data['error']}\n")
+                            elif "mensaje" in horas_data:
+                                f.write(f"{horas_data['mensaje']}\n")
+                            else:
+                                h_trabajadas = horas_data.get("horas_trabajadas", 0)
+                                h_ord = horas_data.get("horas_ordinarias", 0)
+                                h_ext = horas_data.get("horas_extra_diurna", 0) + horas_data.get("horas_extra_nocturna", 0)
+                                
+                                total_horas += h_trabajadas
+                                f.write(f"Horas Trabajadas: {h_trabajadas} (Ord: {h_ord}, Extras: {h_ext})\n")
+                                for reg in horas_data.get("registros", []):
+                                    f.write(f"  {reg['hora']} - {reg['tipo']}\n")
+                            f.write("\n")
+                            
+                        f.write(f"TOTAL HORAS EN EL PERIODO: {round(total_horas, 2)}\n")
                     else:
                         f.write("No se encontro a Santiago Contreras.\n")
 

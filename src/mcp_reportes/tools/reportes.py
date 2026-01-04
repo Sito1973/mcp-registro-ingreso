@@ -121,8 +121,8 @@ async def reporte_horas_semanal(
     """
     
     results = await db.execute(query, {
-        'inicio': str(inicio_semana),
-        'fin': str(fin_semana),
+        'inicio': inicio_semana,
+        'fin': fin_semana,
         'empleado_id': empleado_id,
         'restaurante': restaurante
     })

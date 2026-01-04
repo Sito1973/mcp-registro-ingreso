@@ -1,32 +1,33 @@
 Iniciando...
 Sesion inicializada.
 Empleado encontrado: SANTIAGO CONTRERAS NIETO  (ID: 271ee708-f834-4933-952c-b8adab2c0145)
-DEBUG Response: {
-  "error": "(sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $1: '2026-01-02' ('str' object has no attribute 'toordinal')\n[SQL: \n        SELECT\n            r.id,\n            r.empleado_id,\n            e.codigo_empleado,\n            e.nombre || ' ' || e.apellido AS empleado_nombre,\n            e.cargo,\n            e.departamento,\n            r.tipo_registro,\n            r.punto_trabajo,\n            r.fecha_registro,\n            r.hora_registro,\n            r.timestamp_registro,\n            r.confianza_reconocimiento,\n            r.observaciones\n        FROM registros r\n        JOIN empleados e ON r.empleado_id = e.id\n        WHERE r.fecha_registro = $1\n          AND (CAST($2 AS uuid) IS NULL OR r.empleado_id = CAST($2 AS uuid))\n          AND (CAST($3 AS text) IS NULL OR r.punto_trabajo = $3)\n          AND (CAST($4 AS text) IS NULL OR r.tipo_registro = $4)\n        ORDER BY r.hora_registro\n    ]\n[parameters: ('2026-01-02', '271ee708-f834-4933-952c-b8adab2c0145', None, None)]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)"
-}
-SERVER ERROR: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $1: '2026-01-02' ('str' object has no attribute 'toordinal')
-[SQL: 
-        SELECT
-            r.id,
-            r.empleado_id,
-            e.codigo_empleado,
-            e.nombre || ' ' || e.apellido AS empleado_nombre,
-            e.cargo,
-            e.departamento,
-            r.tipo_registro,
-            r.punto_trabajo,
-            r.fecha_registro,
-            r.hora_registro,
-            r.timestamp_registro,
-            r.confianza_reconocimiento,
-            r.observaciones
-        FROM registros r
-        JOIN empleados e ON r.empleado_id = e.id
-        WHERE r.fecha_registro = $1
-          AND (CAST($2 AS uuid) IS NULL OR r.empleado_id = CAST($2 AS uuid))
-          AND (CAST($3 AS text) IS NULL OR r.punto_trabajo = $3)
-          AND (CAST($4 AS text) IS NULL OR r.tipo_registro = $4)
-        ORDER BY r.hora_registro
-    ]
-[parameters: ('2026-01-02', '271ee708-f834-4933-952c-b8adab2c0145', None, None)]
-(Background on this error at: https://sqlalche.me/e/20/dbapi)
+Consultando horas del 2025-12-29 al 2026-01-02
+
+--- Fecha: 2025-12-29 ---
+Horas Trabajadas: 3.85 (Ord: 3.85, Extras: 0)
+  11:30:57.178919 - ENTRADA
+  15:21:47.580888 - SALIDA
+
+--- Fecha: 2025-12-30 ---
+Horas Trabajadas: 4.18 (Ord: 4.18, Extras: 0)
+  11:03:15.233598 - ENTRADA
+  15:14:07.345285 - SALIDA
+  23:03:49.719510 - ENTRADA
+  23:03:55.199369 - SALIDA
+
+--- Fecha: 2025-12-31 ---
+Horas Trabajadas: 6.43 (Ord: 6.43, Extras: 0)
+  10:02:05.703327 - ENTRADA
+  16:28:07.607581 - SALIDA
+
+--- Fecha: 2026-01-01 ---
+No hay registros para esta fecha
+
+--- Fecha: 2026-01-02 ---
+Horas Trabajadas: 3.62 (Ord: 3.62, Extras: 0)
+  11:38:03.596917 - ENTRADA
+  15:15:10.591742 - SALIDA
+  22:30:42.132386 - ENTRADA
+  22:30:58.113779 - SALIDA
+
+TOTAL HORAS EN EL PERIODO: 18.08
