@@ -75,3 +75,18 @@ params = {'fecha': datetime.strptime("2026-01-02", "%Y-%m-%d").date()}
 | `src/mcp_reportes/tools/registros.py` | **SQL CAST** y conversión `str` -> `date`. |
 | `src/mcp_reportes/tools/reportes.py` | Conversión estricta de objetos `date` en reportes semanales/mensuales. |
 | `src/mcp_reportes/tools/nomina.py` | Eliminación de `str()` redundante en rangos de fechas. |
+
+---
+
+## 🔍 4. Robustez en Filtrado (ILIKE + Comodines)
+
+**Problema:**
+Se detectaron inconsistencias en los nombres de los puntos de trabajo (restaurantes) entre las tablas (ej: `'Leños y Parrilla'` vs `'Leños Y Parrila'`). El uso de igualdad estricta (`=`) causaba que las consultas devolvieran 0 resultados si el filtro no coincidía exactamente con el typo en la base de datos.
+
+**Solución:**
+Se actualizaron todas las consultas SQL cambiándo `=` por `ILIKE` con comodines `%`:
+```sql
+AND punto_trabajo ILIKE '%' || :restaurante || '%'
+```
+Esto permite que filtros como "Leños" o "Parrilla" funcionen correctamente a pesar de variaciones en mayúsculas, tildes o errores tipográficos menores.
+

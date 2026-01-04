@@ -277,3 +277,35 @@ async def empleados_sin_salida(db, fecha: Optional[str] = None) -> dict:
         'total_sin_salida': len(empleados),
         'empleados': empleados
     }
+
+async def mantenimiento_limpiar_puntos(db) -> dict:
+    """
+    Herramienta TEMPORAL para corregir errores tipográficos en los nombres de restaurantes.
+    Renombra 'Leños Y Parrila' -> 'Leños y Parrilla'
+    """
+    check_query = "SELECT COUNT(*) as count FROM registros WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
+    result = await db.execute_one(check_query)
+    count = result['count'] if result else 0
+    
+    if count == 0:
+        return {
+            "mensaje": "No se encontraron registros con el typo 'Leños Y Parrila'.",
+            "detalle": "La base de datos ya está limpia o no hay coincidencias."
+        }
+    
+    update_query = """
+        UPDATE registros 
+        SET punto_trabajo = 'Leños y Parrilla' 
+        WHERE punto_trabajo ILIKE '%Leños%Parrila%'
+    """
+    # Usamos execute sin params para esta query directa
+    # Nota: db.execute retorna filas, pero aquí es un UPDATE. 
+    # Dependiendo de la implementación de db.execute (que usa session.execute), 
+    # podría no retornar el rowcount de forma trivial en la interfaz actual.
+    # Pero forzamos la ejecución.
+    await db.execute(update_query)
+    
+    return {
+        "mensaje": f"Se ha procesado la limpieza de {count} registros.",
+        "detalle": "Registros 'Leños Y Parrila' actualizados a 'Leños y Parrilla'."
+    }

@@ -177,6 +177,11 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["anio", "mes", "quincena"]
             }
+        ),
+        Tool(
+            name="mantenimiento_limpiar_puntos",
+            description="Herramienta TEMPORAL para corregir typos en base de datos (Leños Y Parrila -> Leños y Parrilla)",
+            inputSchema={"type": "object", "properties": {}}
         )
     ]
 
@@ -210,6 +215,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = await reportes.obtener_configuracion(db, **arguments)
         elif name == "resumen_nomina_quincenal":
             result = await nomina.resumen_nomina_quincenal(db, **arguments)
+        elif name == "mantenimiento_limpiar_puntos":
+            result = await registros.mantenimiento_limpiar_puntos(db)
         else:
             result = {"error": f"Herramienta '{name}' no encontrada"}
         
