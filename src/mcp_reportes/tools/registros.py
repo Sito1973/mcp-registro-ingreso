@@ -1,6 +1,7 @@
 """Herramientas MCP para consulta de registros de entrada/salida"""
 
 from typing import Optional
+from datetime import datetime
 from ..utils.fechas import get_current_date
 
 
@@ -48,7 +49,6 @@ async def consultar_registros_fecha(
         ORDER BY r.hora_registro
     """
     
-    from datetime import datetime
     
     params = {
         'fecha': datetime.strptime(fecha, '%Y-%m-%d').date(),
