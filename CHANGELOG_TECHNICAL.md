@@ -90,3 +90,20 @@ AND punto_trabajo ILIKE '%' || :restaurante || '%'
 ```
 Esto permite que filtros como "Leños" o "Parrilla" funcionen correctamente a pesar de variaciones en mayúsculas, tildes o errores tipográficos menores.
 
+---
+
+## 🛠️ 5. Mantenimiento de Base de Datos (Limpieza de Typos)
+
+**Problema:**
+Inconsistencia crítica en nombres de puntos clave (`'Leños Y Parrila'`). Se requiere normalizar la información histórica para que las herramientas de búsqueda exacta funcionen como respaldo a `ILIKE`.
+
+**Solución:**
+Se implementó la herramienta temporal `mantenimiento_limpiar_puntos` que ejecuta un `UPDATE` masivo:
+```sql
+UPDATE registros 
+SET punto_trabajo = 'Leños y Parrilla' 
+WHERE punto_trabajo ILIKE '%Leños%Parrila%'
+```
+Esta herramienta fue expuesta temporalmente en el servidor MCP para ser ejecutada en el ambiente de producción.
+
+

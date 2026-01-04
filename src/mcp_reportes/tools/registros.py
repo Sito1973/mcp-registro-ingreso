@@ -298,12 +298,13 @@ async def mantenimiento_limpiar_puntos(db) -> dict:
         SET punto_trabajo = 'Leños y Parrilla' 
         WHERE punto_trabajo ILIKE '%Leños%Parrila%'
     """
-    # Usamos execute sin params para esta query directa
-    # Nota: db.execute retorna filas, pero aquí es un UPDATE. 
-    # Dependiendo de la implementación de db.execute (que usa session.execute), 
-    # podría no retornar el rowcount de forma trivial en la interfaz actual.
-    # Pero forzamos la ejecución.
-    await db.execute(update_query)
+    try:
+        # Intentamos ejecutar el UPDATE. 
+        # Ignoramos el error de 'no rows' que lanza db.execute al ser un UPDATE.
+        await db.execute(update_query)
+    except Exception as e:
+        if "does not return rows" not in str(e):
+            raise e
     
     return {
         "mensaje": f"Se ha procesado la limpieza de {count} registros.",
