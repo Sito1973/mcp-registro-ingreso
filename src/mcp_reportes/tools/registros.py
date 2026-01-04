@@ -2,7 +2,6 @@
 
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import text
 from ..utils.fechas import get_current_date
 
 
@@ -277,30 +276,5 @@ async def empleados_sin_salida(db, fecha: Optional[str] = None) -> dict:
         'fecha': fecha,
         'total_sin_salida': len(empleados),
         'empleados': empleados
-    }
-
-async def maintenance_listar_nombres_puntos(db) -> dict:
-    """
-    Lista todos los nombres únicos de puntos de trabajo y departamentos
-    """
-    # Unique points in registros
-    q1 = "SELECT DISTINCT punto_trabajo FROM registros WHERE punto_trabajo IS NOT NULL"
-    r1 = await db.execute(q1)
-    puntos_registros = [r['punto_trabajo'] for r in r1]
-    
-    # Unique points in empleados
-    q2 = "SELECT DISTINCT punto_trabajo FROM empleados WHERE punto_trabajo IS NOT NULL"
-    r2 = await db.execute(q2)
-    puntos_empleados = [r['punto_trabajo'] for r in r2]
-    
-    # Unique departments in empleados
-    q3 = "SELECT DISTINCT departamento FROM empleados WHERE departamento IS NOT NULL"
-    r3 = await db.execute(q3)
-    deptos_empleados = [r['departamento'] for r in r3]
-    
-    return {
-        "registros_punto_trabajo": sorted(puntos_registros),
-        "empleados_punto_trabajo": sorted(puntos_empleados),
-        "empleados_departamento": sorted(deptos_empleados)
     }
 
