@@ -4,9 +4,9 @@ import os
 import json
 import contextlib
 from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
-from starlette.routing import Mount, Route
+from starlette.routing import Route
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 import uvicorn
 from .database import Database
@@ -15,28 +15,8 @@ from .tools import empleados, registros, reportes, nomina
 # Instancia de base de datos
 db = Database()
 
-# Configurar seguridad del transporte para permitir el proxy de EasyPanel
-transport_security = TransportSecuritySettings(
-    enable_dns_rebinding_protection=True,
-    allowed_hosts=[
-        "localhost:*",
-        "127.0.0.1:*",
-        "0.0.0.0:*",
-        # EasyPanel hosts
-        "*.easypanel.host:*",
-        "cocson-mcp-registro-e-s.6jy9qo.easypanel.host:*",
-        "cocson-mcp-registro-e-s.6jy9qo.easypanel.host",
-    ],
-)
-
-# Crear servidor MCP con Streamable HTTP
-mcp = FastMCP(
-    "mcp-reportes-acceso",
-    stateless_http=True,
-    json_response=True,
-    streamable_http_path="/mcp",
-    transport_security=transport_security,
-)
+# Crear servidor MCP (solo para stdio mode y definición de tools)
+mcp = FastMCP("mcp-reportes-acceso")
 
 
 # === HERRAMIENTAS DE EMPLEADOS ===
@@ -269,8 +249,363 @@ async def health_check(request):
     })
 
 
+# ============================================================================
+# Manual Streamable HTTP Handler (bypasses DNS rebinding protection issues)
+# ============================================================================
+
+# Registry of tool functions for direct invocation
+TOOL_REGISTRY = {
+    "consultar_empleados": lambda args: empleados.consultar_empleados(
+        db,
+        activos_solo=args.get("activos_solo", True),
+        restaurante=args.get("restaurante"),
+        departamento=args.get("departamento")
+    ),
+    "buscar_empleado": lambda args: empleados.buscar_empleado(
+        db, termino=args.get("termino", "")
+    ),
+    "consultar_registros_fecha": lambda args: registros.consultar_registros_fecha(
+        db,
+        fecha=args.get("fecha", ""),
+        empleado_id=args.get("empleado_id"),
+        restaurante=args.get("restaurante"),
+        tipo=args.get("tipo")
+    ),
+    "consultar_registros_rango": lambda args: registros.consultar_registros_rango(
+        db,
+        fecha_inicio=args.get("fecha_inicio", ""),
+        fecha_fin=args.get("fecha_fin", ""),
+        empleado_id=args.get("empleado_id"),
+        restaurante=args.get("restaurante")
+    ),
+    "obtener_ultimo_registro": lambda args: registros.obtener_ultimo_registro(
+        db, empleado_id=args.get("empleado_id", "")
+    ),
+    "empleados_sin_salida": lambda args: registros.empleados_sin_salida(
+        db, fecha=args.get("fecha")
+    ),
+    "calcular_horas_trabajadas_dia": lambda args: reportes.calcular_horas_trabajadas_dia(
+        db,
+        empleado_id=args.get("empleado_id", ""),
+        fecha=args.get("fecha", "")
+    ),
+    "reporte_horas_semanal": lambda args: reportes.reporte_horas_semanal(
+        db,
+        empleado_id=args.get("empleado_id"),
+        fecha_semana=args.get("fecha_semana"),
+        restaurante=args.get("restaurante")
+    ),
+    "reporte_horas_mensual": lambda args: reportes.reporte_horas_mensual(
+        db,
+        anio=args.get("anio", 2025),
+        mes=args.get("mes", 1),
+        empleado_id=args.get("empleado_id"),
+        restaurante=args.get("restaurante")
+    ),
+    "estadisticas_asistencia": lambda args: reportes.estadisticas_asistencia(
+        db,
+        fecha_inicio=args.get("fecha_inicio", ""),
+        fecha_fin=args.get("fecha_fin", ""),
+        restaurante=args.get("restaurante")
+    ),
+    "obtener_configuracion": lambda args: reportes.obtener_configuracion(
+        db, clave=args.get("clave")
+    ),
+    "resumen_nomina_quincenal": lambda args: nomina.resumen_nomina_quincenal(
+        db,
+        anio=args.get("anio", 2025),
+        mes=args.get("mes", 1),
+        quincena=args.get("quincena", 1),
+        restaurante=args.get("restaurante")
+    ),
+}
+
+# Tool definitions for tools/list response
+TOOL_DEFINITIONS = [
+    {
+        "name": "consultar_empleados",
+        "description": "Lista empleados del sistema con filtros opcionales por restaurante y departamento",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "activos_solo": {"type": "boolean", "default": True, "description": "Solo empleados activos"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"},
+                "departamento": {"type": "string", "description": "Filtrar por departamento"}
+            }
+        }
+    },
+    {
+        "name": "buscar_empleado",
+        "description": "Busca empleados por código, nombre o apellido",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "termino": {"type": "string", "description": "Término de búsqueda"}
+            },
+            "required": ["termino"]
+        }
+    },
+    {
+        "name": "consultar_registros_fecha",
+        "description": "Consulta registros de entrada/salida de una fecha específica",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "fecha": {"type": "string", "description": "Fecha en formato YYYY-MM-DD"},
+                "empleado_id": {"type": "string", "description": "ID del empleado"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"},
+                "tipo": {"type": "string", "description": "Tipo de registro: ENTRADA o SALIDA"}
+            },
+            "required": ["fecha"]
+        }
+    },
+    {
+        "name": "consultar_registros_rango",
+        "description": "Consulta registros en un rango de fechas",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "fecha_inicio": {"type": "string", "description": "Fecha inicial YYYY-MM-DD"},
+                "fecha_fin": {"type": "string", "description": "Fecha final YYYY-MM-DD"},
+                "empleado_id": {"type": "string", "description": "ID del empleado"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"}
+            },
+            "required": ["fecha_inicio", "fecha_fin"]
+        }
+    },
+    {
+        "name": "obtener_ultimo_registro",
+        "description": "Obtiene el último registro de un empleado",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "empleado_id": {"type": "string", "description": "ID del empleado"}
+            },
+            "required": ["empleado_id"]
+        }
+    },
+    {
+        "name": "empleados_sin_salida",
+        "description": "Lista empleados con entrada pero sin salida en una fecha",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "fecha": {"type": "string", "description": "Fecha YYYY-MM-DD (default: hoy)"}
+            }
+        }
+    },
+    {
+        "name": "calcular_horas_trabajadas_dia",
+        "description": "Calcula horas trabajadas de un empleado en un día con desglose de extras",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "empleado_id": {"type": "string", "description": "ID del empleado"},
+                "fecha": {"type": "string", "description": "Fecha YYYY-MM-DD"}
+            },
+            "required": ["empleado_id", "fecha"]
+        }
+    },
+    {
+        "name": "reporte_horas_semanal",
+        "description": "Genera reporte semanal de horas trabajadas por empleado",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "empleado_id": {"type": "string", "description": "ID del empleado"},
+                "fecha_semana": {"type": "string", "description": "Cualquier fecha de la semana YYYY-MM-DD"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"}
+            }
+        }
+    },
+    {
+        "name": "reporte_horas_mensual",
+        "description": "Genera reporte mensual consolidado de horas por empleado",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "anio": {"type": "integer", "description": "Año (ej: 2025)"},
+                "mes": {"type": "integer", "description": "Mes (1-12)"},
+                "empleado_id": {"type": "string", "description": "ID del empleado"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"}
+            },
+            "required": ["anio", "mes"]
+        }
+    },
+    {
+        "name": "estadisticas_asistencia",
+        "description": "Genera estadísticas de asistencia para un período",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "fecha_inicio": {"type": "string", "description": "Fecha inicial YYYY-MM-DD"},
+                "fecha_fin": {"type": "string", "description": "Fecha final YYYY-MM-DD"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"}
+            },
+            "required": ["fecha_inicio", "fecha_fin"]
+        }
+    },
+    {
+        "name": "obtener_configuracion",
+        "description": "Obtiene configuraciones del sistema para nómina",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "clave": {"type": "string", "description": "Clave de configuración específica"}
+            }
+        }
+    },
+    {
+        "name": "resumen_nomina_quincenal",
+        "description": "Genera resumen para liquidación de nómina quincenal",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "anio": {"type": "integer", "description": "Año (ej: 2025)"},
+                "mes": {"type": "integer", "description": "Mes (1-12)"},
+                "quincena": {"type": "integer", "description": "Quincena (1 o 2)"},
+                "restaurante": {"type": "string", "description": "Filtrar por restaurante"}
+            },
+            "required": ["anio", "mes", "quincena"]
+        }
+    },
+]
+
+
+async def handle_streamable_http(request: Request):
+    """
+    Handle Streamable HTTP MCP requests.
+    This bypasses FastMCP's DNS rebinding protection for EasyPanel compatibility.
+    """
+    import sys
+
+    method = request.method
+    print(f"[Streamable HTTP] {method} /mcp", file=sys.stderr)
+
+    if method == "GET":
+        # Return server info for discovery
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "serverInfo": {
+                    "name": "mcp-reportes-acceso",
+                    "version": "2.0.0"
+                },
+                "capabilities": {
+                    "tools": {}
+                }
+            }
+        })
+
+    if method == "POST":
+        try:
+            body = await request.json()
+            print(f"[Streamable HTTP] Request: {json.dumps(body)[:200]}", file=sys.stderr)
+
+            method_name = body.get("method", "")
+            msg_id = body.get("id")
+            params = body.get("params", {})
+
+            # Handle notifications (no response needed but n8n expects one)
+            if method_name.startswith("notifications/"):
+                if msg_id is not None:
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "result": {}
+                    })
+                return JSONResponse({"jsonrpc": "2.0", "result": {}})
+
+            if method_name == "initialize":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "protocolVersion": "2024-11-05",
+                        "serverInfo": {
+                            "name": "mcp-reportes-acceso",
+                            "version": "2.0.0"
+                        },
+                        "capabilities": {
+                            "tools": {}
+                        }
+                    }
+                }
+                print(f"[Streamable HTTP] Initialize response sent", file=sys.stderr)
+                return JSONResponse(response)
+
+            elif method_name == "tools/list":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {"tools": TOOL_DEFINITIONS}
+                }
+                print(f"[Streamable HTTP] Tools list: {len(TOOL_DEFINITIONS)} tools", file=sys.stderr)
+                return JSONResponse(response)
+
+            elif method_name == "tools/call":
+                tool_name = params.get("name", "")
+                tool_args = params.get("arguments", {})
+
+                print(f"[Streamable HTTP] Calling tool: {tool_name}", file=sys.stderr)
+
+                if tool_name not in TOOL_REGISTRY:
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "error": {"code": -32601, "message": f"Tool not found: {tool_name}"}
+                    })
+
+                try:
+                    # Call the tool function
+                    result = await TOOL_REGISTRY[tool_name](tool_args)
+
+                    # Format result as JSON string
+                    text_content = json.dumps(result, default=str, ensure_ascii=False, indent=2)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "result": {
+                            "content": [{"type": "text", "text": text_content}]
+                        }
+                    }
+                    print(f"[Streamable HTTP] Tool {tool_name} executed successfully", file=sys.stderr)
+                    return JSONResponse(response)
+
+                except Exception as e:
+                    print(f"[Streamable HTTP] Tool error: {e}", file=sys.stderr)
+                    import traceback
+                    traceback.print_exc(file=sys.stderr)
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "error": {"code": -32000, "message": str(e)}
+                    })
+
+            else:
+                # Unknown method
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32601, "message": f"Method not found: {method_name}"}
+                })
+
+        except Exception as e:
+            print(f"[Streamable HTTP ERROR] {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            return JSONResponse(
+                {"jsonrpc": "2.0", "error": {"code": -32000, "message": str(e)}},
+                status_code=500
+            )
+
+    return JSONResponse({"error": "Method not allowed"}, status_code=405)
+
+
 def create_starlette_app():
-    """Crea la aplicación Starlette con el servidor MCP montado"""
+    """Crea la aplicación Starlette con el handler Streamable HTTP manual"""
 
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette):
@@ -278,23 +613,16 @@ def create_starlette_app():
         # Conectar base de datos
         await db.connect()
         print("Base de datos conectada")
-
-        # Iniciar el session manager de MCP
-        async with mcp.session_manager.run():
-            yield
-
+        yield
         # Desconectar base de datos
         await db.disconnect()
         print("Base de datos desconectada")
 
-    # Obtener la app MCP con el path configurado
-    mcp_app = mcp.streamable_http_app()
-
     app = Starlette(
         routes=[
+            Route("/", health_check, methods=["GET"]),
             Route("/health", health_check, methods=["GET"]),
-            # Montar en root para evitar problemas de path
-            Mount("/", app=mcp_app),
+            Route("/mcp", handle_streamable_http, methods=["GET", "POST"]),
         ],
         lifespan=lifespan,
     )
