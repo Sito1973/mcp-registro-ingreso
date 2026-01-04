@@ -239,6 +239,7 @@ async def handle_sse(request):
             streams[1],
             server.create_initialization_options()
         )
+    return NoOpResponse()
 
 
 async def handle_messages(request):
