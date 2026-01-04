@@ -279,37 +279,50 @@ async def empleados_sin_salida(db, fecha: Optional[str] = None) -> dict:
         'empleados': empleados
     }
 
+async def maintenance_buscar_typos(db) -> dict:
+    """
+    Busca el typo 'Leños Y Parrila' en varias tablas/campos
+    """
+    results = {}
+    
+    # Check registros.punto_trabajo (should be 0 now after previous fix)
+    q1 = "SELECT COUNT(*) as count FROM registros WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
+    r1 = await db.execute_one(q1)
+    results["registros.punto_trabajo"] = r1["count"] if r1 else 0
+    
+    # Check empleados.punto_trabajo
+    q2 = "SELECT COUNT(*) as count FROM empleados WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
+    r2 = await db.execute_one(q2)
+    results["empleados.punto_trabajo"] = r2["count"] if r2 else 0
+    
+    # Check empleados.departamento
+    q3 = "SELECT COUNT(*) as count FROM empleados WHERE departamento ILIKE '%Leños%Parrila%'"
+    r3 = await db.execute_one(q3)
+    results["empleados.departamento"] = r3["count"] if r3 else 0
+    
+    return {
+        "resultados": results,
+        "mensaje": "Búsqueda de typos completada."
+    }
+
 async def mantenimiento_limpiar_puntos(db) -> dict:
     """
     Herramienta TEMPORAL para corregir errores tipográficos en los nombres de restaurantes.
-    Renombra 'Leños Y Parrila' -> 'Leños y Parrilla'
     """
-    check_query = "SELECT COUNT(*) as count FROM registros WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
-    result = await db.execute_one(check_query)
-    count = result['count'] if result else 0
+    # Fix registros
+    u1 = "UPDATE registros SET punto_trabajo = 'Leños y Parrilla' WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
+    # Fix empleados
+    u2 = "UPDATE empleados SET punto_trabajo = 'Leños y Parrilla' WHERE punto_trabajo ILIKE '%Leños%Parrila%'"
+    u3 = "UPDATE empleados SET departamento = 'Leños y Parrilla' WHERE departamento ILIKE '%Leños%Parrila%'"
     
-    if count == 0:
-        return {
-            "mensaje": "No se encontraron registros con el typo 'Leños Y Parrila'.",
-            "detalle": "La base de datos ya está limpia o no hay coincidencias."
-        }
-    
-    update_query = """
-        UPDATE registros 
-        SET punto_trabajo = 'Leños y Parrilla' 
-        WHERE punto_trabajo ILIKE '%Leños%Parrila%'
-    """
     try:
-        # Usamos una sesión directa para poder hacer commit
         async with db.session_factory() as session:
-            await session.execute(text(update_query))
+            await session.execute(text(u1))
+            await session.execute(text(u2))
+            await session.execute(text(u3))
             await session.commit()
     except Exception as e:
-        # Si falla por 'no rows' (que no debería con session.execute directo, pero por si acaso)
         if "does not return rows" not in str(e):
             raise e
-    
-    return {
-        "mensaje": f"Se ha procesado la limpieza de {count} registros.",
-        "detalle": "Registros 'Leños Y Parrila' actualizados a 'Leños y Parrilla' con COMMIT explícito."
-    }
+            
+    return {"mensaje": "Limpieza profunda completada."}

@@ -179,8 +179,13 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
+            name="maintenance_buscar_typos",
+            description="Busca discrepancias y typos en los campos de restaurante/departamento",
+            inputSchema={"type": "object", "properties": {}}
+        ),
+        Tool(
             name="mantenimiento_limpiar_puntos",
-            description="Herramienta TEMPORAL para corregir typos en base de datos (Leños Y Parrila -> Leños y Parrilla)",
+            description="Limpia typos en todas las tablas (empleados y registros)",
             inputSchema={"type": "object", "properties": {}}
         )
     ]
@@ -215,6 +220,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = await reportes.obtener_configuracion(db, **arguments)
         elif name == "resumen_nomina_quincenal":
             result = await nomina.resumen_nomina_quincenal(db, **arguments)
+        elif name == "maintenance_buscar_typos":
+            result = await registros.maintenance_buscar_typos(db)
         elif name == "mantenimiento_limpiar_puntos":
             result = await registros.mantenimiento_limpiar_puntos(db)
         else:
