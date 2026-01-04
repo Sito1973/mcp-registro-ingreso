@@ -438,7 +438,7 @@ async def obtener_configuracion(db, clave: Optional[str] = None) -> dict:
     query = """
         SELECT clave, valor, descripcion, tipo_dato
         FROM configuracion
-        WHERE (:clave IS NULL OR clave = :clave)
+        WHERE (:clave::text IS NULL OR clave = :clave)
         ORDER BY clave
     """
     

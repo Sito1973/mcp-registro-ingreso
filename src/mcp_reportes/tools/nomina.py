@@ -56,7 +56,7 @@ async def resumen_nomina_quincenal(
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro BETWEEN :inicio AND :fin
-          AND (:restaurante IS NULL OR r.punto_trabajo = :restaurante)
+          AND (:restaurante::text IS NULL OR r.punto_trabajo = :restaurante)
           AND e.activo = TRUE
         ORDER BY e.apellido, e.nombre, r.fecha_registro, r.hora_registro
     """
