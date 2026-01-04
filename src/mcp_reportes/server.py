@@ -177,6 +177,11 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["anio", "mes", "quincena"]
             }
+        ),
+        Tool(
+            name="maintenance_listar_nombres_puntos",
+            description="Lista todos los nombres únicos de restaurantes/puntos en la base de datos",
+            inputSchema={"type": "object", "properties": {}}
         )
     ]
 
@@ -210,6 +215,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = await reportes.obtener_configuracion(db, **arguments)
         elif name == "resumen_nomina_quincenal":
             result = await nomina.resumen_nomina_quincenal(db, **arguments)
+        elif name == "maintenance_listar_nombres_puntos":
+            result = await registros.maintenance_listar_nombres_puntos(db)
         else:
             result = {"error": f"Herramienta '{name}' no encontrada"}
         
