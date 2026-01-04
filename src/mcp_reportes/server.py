@@ -177,19 +177,6 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["anio", "mes", "quincena"]
             }
-        ),
-        Tool(
-            name="maintenance_fusionar_empleados",
-            description="Fusiona dos empleados (migra registros y borra duplicado)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "id_origen": {"type": "string", "description": "ID del que se va a borrar"},
-                    "id_destino": {"type": "string", "description": "ID del que se queda"},
-                    "nuevo_codigo": {"type": "string", "description": "Nuevo código para el destino"}
-                },
-                "required": ["id_origen", "id_destino", "nuevo_codigo"]
-            }
         )
     ]
 
@@ -223,8 +210,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = await reportes.obtener_configuracion(db, **arguments)
         elif name == "resumen_nomina_quincenal":
             result = await nomina.resumen_nomina_quincenal(db, **arguments)
-        elif name == "maintenance_fusionar_empleados":
-            result = await registros.maintenance_fusionar_empleados(db, **arguments)
         else:
             result = {"error": f"Herramienta '{name}' no encontrada"}
         

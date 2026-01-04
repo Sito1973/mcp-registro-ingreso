@@ -2,7 +2,6 @@
 
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import text
 from ..utils.fechas import get_current_date
 
 
@@ -278,50 +277,5 @@ async def empleados_sin_salida(db, fecha: Optional[str] = None) -> dict:
         'total_sin_salida': len(empleados),
         'empleados': empleados
     }
-
-async def maintenance_fusionar_empleados(db, id_origen: str, id_destino: str, nuevo_codigo: str) -> dict:
-    """
-    Fusiona dos registros de empleados:
-    1. Limpia código en origen (para evitar conflictos de UNIQUE).
-    2. Migra todos los registros de id_origen a id_destino.
-    3. Actualiza el código de id_destino.
-    4. Elimina id_origen.
-    """
-    import uuid
-    temp_code = f"temp_{uuid.uuid4().hex[:8]}"
-    
-    try:
-        async with db.session_factory() as session:
-            # 1. Limpiar código en origen (evitar IntegrityError por UNIQUE constraint)
-            q_clear = text("UPDATE empleados SET codigo_empleado = :tmp WHERE id = :orig")
-            await session.execute(q_clear, {"tmp": temp_code, "orig": id_origen})
-            
-            # 2. Contar registros a migrar
-            q_count = text("SELECT COUNT(*) FROM registros WHERE empleado_id = :orig")
-            res_count = await session.execute(q_count, {"orig": id_origen})
-            count = res_count.scalar()
-            
-            # 3. Migrar registros
-            if count > 0:
-                q_migrate = text("UPDATE registros SET empleado_id = :dest WHERE empleado_id = :orig")
-                await session.execute(q_migrate, {"dest": id_destino, "orig": id_origen})
-            
-            # 4. Actualizar código en destino
-            q_update = text("UPDATE empleados SET codigo_empleado = :cod WHERE id = :dest")
-            await session.execute(q_update, {"cod": nuevo_codigo, "dest": id_destino})
-            
-            # 5. Eliminar origen
-            q_delete = text("DELETE FROM empleados WHERE id = :orig")
-            await session.execute(q_delete, {"orig": id_origen})
-            
-            await session.commit()
-            
-            return {
-                "status": "success",
-                "registros_migrados": count,
-                "mensaje": f"Alexis fusionado correctamente. Código {nuevo_codigo} asignado a {id_destino}."
-            }
-    except Exception as e:
-        return {"status": "error", "mensaje": str(e)}
 
 
