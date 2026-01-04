@@ -1,0 +1,4 @@
+Iniciando...
+Sesion inicializada.
+Empleado encontrado: SANTIAGO CONTRERAS NIETO  (ID: 271ee708-f834-4933-952c-b8adab2c0145)
+ERROR: unhandled errors in a TaskGroup (1 sub-exception)

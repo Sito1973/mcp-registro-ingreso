@@ -42,9 +42,9 @@ async def consultar_registros_fecha(
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro = :fecha
-          AND (:empleado_id IS NULL OR r.empleado_id = :empleado_id::uuid)
-          AND (:restaurante IS NULL OR r.punto_trabajo = :restaurante)
-          AND (:tipo IS NULL OR r.tipo_registro = :tipo)
+          AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
+          AND (CAST(:tipo AS text) IS NULL OR r.tipo_registro = :tipo)
         ORDER BY r.hora_registro
     """
     
