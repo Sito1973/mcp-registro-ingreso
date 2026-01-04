@@ -115,7 +115,7 @@ async def reporte_horas_semanal(
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro BETWEEN :inicio AND :fin
           AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
-          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE '%' || :restaurante || '%')
           AND e.activo = TRUE
         ORDER BY e.apellido, e.nombre, r.fecha_registro, r.hora_registro
     """
@@ -251,7 +251,7 @@ async def reporte_horas_mensual(
         WHERE EXTRACT(YEAR FROM r.fecha_registro) = :anio
           AND EXTRACT(MONTH FROM r.fecha_registro) = :mes
           AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
-          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE '%' || :restaurante || '%')
           AND e.activo = TRUE
         ORDER BY e.apellido, e.nombre, r.fecha_registro, r.hora_registro
     """
@@ -369,7 +369,7 @@ async def estadisticas_asistencia(
             punto_trabajo
         FROM registros
         WHERE fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
-          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo ILIKE '%' || :restaurante || '%')
         GROUP BY punto_trabajo
     """
     
@@ -405,7 +405,7 @@ async def estadisticas_asistencia(
         SELECT COUNT(DISTINCT empleado_id) AS total
         FROM registros
         WHERE fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
-          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo ILIKE '%' || :restaurante || '%')
     """
     emp_result = await db.execute_one(query_empleados, {
         'fecha_inicio': datetime.strptime(fecha_inicio, '%Y-%m-%d').date(),
