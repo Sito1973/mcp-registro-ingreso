@@ -119,11 +119,10 @@ async def consultar_registros_rango(
             r.observaciones
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
-        WHERE r.fecha_registro = :fecha
-          AND (:empleado_id::uuid IS NULL OR r.empleado_id = :empleado_id::uuid)
-          AND (:restaurante::text IS NULL OR r.punto_trabajo = :restaurante)
-          AND (:tipo::text IS NULL OR r.tipo_registro = :tipo)
-        ORDER BY r.hora_registro
+        WHERE r.fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
+          AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
+        ORDER BY r.fecha_registro, r.hora_registro
     """
     
     params = {
@@ -183,7 +182,7 @@ async def obtener_ultimo_registro(db, empleado_id: str) -> dict:
             e.nombre || ' ' || e.apellido AS empleado_nombre
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
-        WHERE r.empleado_id = :empleado_id::uuid
+        WHERE r.empleado_id = CAST(:empleado_id AS uuid)
         ORDER BY r.fecha_registro DESC, r.hora_registro DESC
         LIMIT 1
     """
@@ -250,7 +249,7 @@ async def empleados_sin_salida(db, fecha: Optional[str] = None) -> dict:
             e.nombre || ' ' || e.apellido AS empleado_nombre,
             en.primera_entrada AS hora_entrada,
             en.punto_trabajo,
-            EXTRACT(EPOCH FROM (NOW() - ((:fecha)::date + en.primera_entrada))) / 3600 AS horas_transcurridas
+            EXTRACT(EPOCH FROM (NOW() - (CAST(:fecha AS date) + en.primera_entrada))) / 3600 AS horas_transcurridas
         FROM entradas en
         JOIN empleados e ON en.empleado_id = e.id
         LEFT JOIN salidas s ON en.empleado_id = s.empleado_id

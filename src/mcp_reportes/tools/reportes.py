@@ -21,7 +21,7 @@ async def calcular_horas_trabajadas_dia(db, empleado_id: str, fecha: str) -> dic
     # Obtener datos del empleado
     empleado_query = """
         SELECT nombre || ' ' || apellido AS nombre, liquida_dominical
-        FROM empleados WHERE id = :empleado_id::uuid
+        FROM empleados WHERE id = CAST(:empleado_id AS uuid)
     """
     empleado = await db.execute_one(empleado_query, {'empleado_id': empleado_id})
     
@@ -35,7 +35,7 @@ async def calcular_horas_trabajadas_dia(db, empleado_id: str, fecha: str) -> dic
             hora_registro,
             observaciones
         FROM registros
-        WHERE empleado_id = :empleado_id::uuid
+        WHERE empleado_id = CAST(:empleado_id AS uuid)
           AND fecha_registro = :fecha
         ORDER BY hora_registro
     """
@@ -114,8 +114,8 @@ async def reporte_horas_semanal(
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro BETWEEN :inicio AND :fin
-          AND (:empleado_id IS NULL OR r.empleado_id = :empleado_id::uuid)
-          AND (:restaurante IS NULL OR r.punto_trabajo = :restaurante)
+          AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
           AND e.activo = TRUE
         ORDER BY e.apellido, e.nombre, r.fecha_registro, r.hora_registro
     """
@@ -250,8 +250,8 @@ async def reporte_horas_mensual(
         JOIN empleados e ON r.empleado_id = e.id
         WHERE EXTRACT(YEAR FROM r.fecha_registro) = :anio
           AND EXTRACT(MONTH FROM r.fecha_registro) = :mes
-          AND (:empleado_id IS NULL OR r.empleado_id = :empleado_id::uuid)
-          AND (:restaurante IS NULL OR r.punto_trabajo = :restaurante)
+          AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo = :restaurante)
           AND e.activo = TRUE
         ORDER BY e.apellido, e.nombre, r.fecha_registro, r.hora_registro
     """
@@ -369,7 +369,7 @@ async def estadisticas_asistencia(
             punto_trabajo
         FROM registros
         WHERE fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
-          AND (:restaurante IS NULL OR punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
         GROUP BY punto_trabajo
     """
     
@@ -405,7 +405,7 @@ async def estadisticas_asistencia(
         SELECT COUNT(DISTINCT empleado_id) AS total
         FROM registros
         WHERE fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
-          AND (:restaurante IS NULL OR punto_trabajo = :restaurante)
+          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
     """
     emp_result = await db.execute_one(query_empleados, {
         'fecha_inicio': fecha_inicio,
@@ -438,7 +438,7 @@ async def obtener_configuracion(db, clave: Optional[str] = None) -> dict:
     query = """
         SELECT clave, valor, descripcion, tipo_dato
         FROM configuracion
-        WHERE (:clave::text IS NULL OR clave = :clave)
+        WHERE (CAST(:clave AS text) IS NULL OR clave = :clave)
         ORDER BY clave
     """
     

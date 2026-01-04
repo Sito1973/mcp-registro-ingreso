@@ -37,9 +37,9 @@ async def consultar_empleados(
             activo,
             created_at
         FROM empleados
-        WHERE (:activo::boolean = FALSE OR activo = :activo)
-          AND (:restaurante::text IS NULL OR punto_trabajo = :restaurante)
-          AND (:departamento::text IS NULL OR departamento = :departamento)
+        WHERE (CAST(:activo AS boolean) = FALSE OR activo = :activo)
+          AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
+          AND (CAST(:departamento AS text) IS NULL OR departamento = :departamento)
         ORDER BY apellido, nombre
     """
     
