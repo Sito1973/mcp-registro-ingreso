@@ -244,6 +244,7 @@ async def handle_messages(request):
             request.receive,
             request._send
         )
+    return JSONResponse({"status": "accepted"}, status_code=202)
 
 
 async def health_check(request):

@@ -119,10 +119,11 @@ async def consultar_registros_rango(
             r.observaciones
         FROM registros r
         JOIN empleados e ON r.empleado_id = e.id
-        WHERE r.fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
-          AND (:empleado_id IS NULL OR r.empleado_id = :empleado_id::uuid)
-          AND (:restaurante IS NULL OR r.punto_trabajo = :restaurante)
-        ORDER BY r.fecha_registro, r.hora_registro
+        WHERE r.fecha_registro = :fecha
+          AND (:empleado_id::uuid IS NULL OR r.empleado_id = :empleado_id::uuid)
+          AND (:restaurante::text IS NULL OR r.punto_trabajo = :restaurante)
+          AND (:tipo::text IS NULL OR r.tipo_registro = :tipo)
+        ORDER BY r.hora_registro
     """
     
     params = {

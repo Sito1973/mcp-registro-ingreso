@@ -13,8 +13,10 @@ class Database:
     """Clase para manejar conexiones async a PostgreSQL"""
     
     def __init__(self):
-        self.database_url = os.getenv(
-            "DATABASE_URL_ASYNC",
+        # Buscar en múltiples variables de entorno
+        self.database_url = (
+            os.getenv("DATABASE_URL_ASYNC") or
+            os.getenv("DATABASE_URL_FALLBACK") or
             "postgresql+asyncpg://cocson:password@localhost:5432/acceso-cocson"
         )
         self.engine = None
