@@ -305,6 +305,46 @@ async def maintenance_buscar_typos(db) -> dict:
         "mensaje": "Búsqueda de typos completada."
     }
 
+async def maintenance_descubrir_esquema(db) -> dict:
+    """
+    Busca todas las tablas que tengan columnas de texto y escanea por el typo
+    """
+    # 1. Listar todas las tablas y columnas
+    q_tables = """
+        SELECT table_name, column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND data_type IN ('text', 'character varying')
+    """
+    tables = await db.execute(q_tables)
+    
+    findings = []
+    
+    for row in tables:
+        table = row['table_name']
+        column = row['column_name']
+        
+        # Ignorar tablas de sistema si hay alguna
+        if table.startswith('pg_'): continue
+        
+        q_check = f"SELECT COUNT(*) as count FROM {table} WHERE {column} ILIKE '%Leños%Parrila%'"
+        try:
+            r = await db.execute_one(q_check)
+            count = r['count'] if r else 0
+            if count > 0:
+                findings.append({
+                    "tabla": table,
+                    "columna": column,
+                    "cantidad": count
+                })
+        except:
+            continue
+            
+    return {
+        "hallazgos": findings,
+        "total_tablas_escaneadas": len(set(t['table_name'] for t in tables))
+    }
+
 async def mantenimiento_limpiar_puntos(db) -> dict:
     """
     Herramienta TEMPORAL para corregir errores tipográficos en los nombres de restaurantes.
