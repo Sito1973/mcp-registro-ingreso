@@ -627,6 +627,18 @@ def create_starlette_app():
         lifespan=lifespan,
     )
 
+    # Añadir CORS Middleware para permitir acceso desde ChatKit/Web
+    from starlette.middleware import Middleware
+    from starlette.middleware.cors import CORSMiddleware
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     return app
 
 
