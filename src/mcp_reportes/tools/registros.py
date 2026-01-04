@@ -2,6 +2,7 @@
 
 from typing import Optional
 from datetime import datetime
+from sqlalchemy import text
 from ..utils.fechas import get_current_date
 
 
@@ -299,14 +300,16 @@ async def mantenimiento_limpiar_puntos(db) -> dict:
         WHERE punto_trabajo ILIKE '%Leños%Parrila%'
     """
     try:
-        # Intentamos ejecutar el UPDATE. 
-        # Ignoramos el error de 'no rows' que lanza db.execute al ser un UPDATE.
-        await db.execute(update_query)
+        # Usamos una sesión directa para poder hacer commit
+        async with db.session_factory() as session:
+            await session.execute(text(update_query))
+            await session.commit()
     except Exception as e:
+        # Si falla por 'no rows' (que no debería con session.execute directo, pero por si acaso)
         if "does not return rows" not in str(e):
             raise e
     
     return {
         "mensaje": f"Se ha procesado la limpieza de {count} registros.",
-        "detalle": "Registros 'Leños Y Parrila' actualizados a 'Leños y Parrilla'."
+        "detalle": "Registros 'Leños Y Parrila' actualizados a 'Leños y Parrilla' con COMMIT explícito."
     }
