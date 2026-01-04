@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
 
@@ -43,15 +44,21 @@ async def get_data():
                         )
                         reg_data = json.loads(reg_result.content[0].text)
                         
-                        f.write(f"Total registros: {reg_data['total_registros']}\n")
-                        for reg in reg_data["registros"]:
-                            f.write(f"- {reg['hora_registro']} | {reg['tipo_registro']} | {reg['punto_trabajo']}\n")
+                        f.write(f"DEBUG Response: {json.dumps(reg_data, indent=2)}\n")
+                        
+                        if "error" in reg_data:
+                             f.write(f"SERVER ERROR: {reg_data['error']}\n")
+                        else:
+                             f.write(f"Total registros: {reg_data.get('total_registros', 'N/A')}\n")
+                             for reg in reg_data.get("registros", []):
+                                 f.write(f"- {reg['hora_registro']} | {reg['tipo_registro']} | {reg['punto_trabajo']}\n")
                     else:
                         f.write("No se encontro a Santiago Contreras.\n")
 
     except Exception as e:
         with open(output_file, "a", encoding="utf-8") as f:
             f.write(f"ERROR: {str(e)}\n")
+            f.write(traceback.format_exc())
 
 if __name__ == "__main__":
     asyncio.run(get_data())

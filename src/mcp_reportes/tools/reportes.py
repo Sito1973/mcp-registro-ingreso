@@ -42,7 +42,7 @@ async def calcular_horas_trabajadas_dia(db, empleado_id: str, fecha: str) -> dic
     
     registros = await db.execute(registros_query, {
         'empleado_id': empleado_id,
-        'fecha': fecha
+        'fecha': datetime.strptime(fecha, '%Y-%m-%d').date()
     })
     
     if not registros:
@@ -136,7 +136,7 @@ async def reporte_horas_semanal(
                 'empleado_id': emp_id,
                 'codigo': row['codigo_empleado'],
                 'nombre': row['empleado_nombre'],
-                'liquida_dominical': row['liquida_dominical'],
+                'liquida_dominical': row['liquida_dominical'] if row['liquida_dominical'] is not None else False,
                 'registros_por_fecha': {}
             }
         
@@ -374,8 +374,8 @@ async def estadisticas_asistencia(
     """
     
     results = await db.execute(query, {
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
+        'fecha_inicio': datetime.strptime(fecha_inicio, '%Y-%m-%d').date(),
+        'fecha_fin': datetime.strptime(fecha_fin, '%Y-%m-%d').date(),
         'restaurante': restaurante
     })
     
@@ -408,8 +408,8 @@ async def estadisticas_asistencia(
           AND (CAST(:restaurante AS text) IS NULL OR punto_trabajo = :restaurante)
     """
     emp_result = await db.execute_one(query_empleados, {
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
+        'fecha_inicio': datetime.strptime(fecha_inicio, '%Y-%m-%d').date(),
+        'fecha_fin': datetime.strptime(fecha_fin, '%Y-%m-%d').date(),
         'restaurante': restaurante
     })
     totales['empleados_unicos'] = emp_result['total'] if emp_result else 0

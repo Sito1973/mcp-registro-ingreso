@@ -48,8 +48,10 @@ async def consultar_registros_fecha(
         ORDER BY r.hora_registro
     """
     
+    from datetime import datetime
+    
     params = {
-        'fecha': fecha,
+        'fecha': datetime.strptime(fecha, '%Y-%m-%d').date(),
         'empleado_id': empleado_id,
         'restaurante': restaurante,
         'tipo': tipo
@@ -126,8 +128,8 @@ async def consultar_registros_rango(
     """
     
     params = {
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
+        'fecha_inicio': datetime.strptime(fecha_inicio, '%Y-%m-%d').date(),
+        'fecha_fin': datetime.strptime(fecha_fin, '%Y-%m-%d').date(),
         'empleado_id': empleado_id,
         'restaurante': restaurante
     }
