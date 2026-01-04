@@ -44,7 +44,7 @@ async def consultar_registros_fecha(
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro = :fecha
           AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
-          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE '%' || :restaurante || '%')
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE ('%' || CAST(:restaurante AS text) || '%'))
           AND (CAST(:tipo AS text) IS NULL OR r.tipo_registro = :tipo)
         ORDER BY r.hora_registro
     """
@@ -123,7 +123,7 @@ async def consultar_registros_rango(
         JOIN empleados e ON r.empleado_id = e.id
         WHERE r.fecha_registro BETWEEN :fecha_inicio AND :fecha_fin
           AND (CAST(:empleado_id AS uuid) IS NULL OR r.empleado_id = CAST(:empleado_id AS uuid))
-          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE '%' || :restaurante || '%')
+          AND (CAST(:restaurante AS text) IS NULL OR r.punto_trabajo ILIKE ('%' || CAST(:restaurante AS text) || '%'))
         ORDER BY r.fecha_registro, r.hora_registro
     """
     
